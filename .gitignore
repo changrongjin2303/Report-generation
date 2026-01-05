@@ -1,0 +1,29 @@
+# OS & IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env
+
+# Node.js / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.eslintcache
+
+# Project Specific
+tmp_reports/
+uploads/
+extracted_media/
+database.db
+*.log
+generated_report_test.docx
+debug_report_short_name.docx
+debug_report_short_name.pdf
+fixed_cover_demo.docx
+test_render_output.docx
