@@ -118,27 +118,27 @@ ssh -p $SSH_PORT $SSH_USER@$SERVER_IP << EOF
     cd $REMOTE_DIR
 
     # 停止并删除旧容器
-    docker compose down 2>/dev/null || true
+    docker-compose down 2>/dev/null || true
 
     # 构建镜像
-    docker compose build
+    docker-compose build
 
     # 启动容器
-    docker compose up -d
+    docker-compose up -d
 
     # 显示容器状态
-    docker compose ps
+    docker-compose ps
 EOF
 
 # 获取服务器 IP 和端口
 print_info "===================================="
 print_info "部署完成！"
-print_info "访问地址: http://$SERVER_IP"
-print_info "后端 API: http://$SERVER_IP:8000"
+print_info "访问地址: http://$SERVER_IP:81"
+print_info "后端 API: http://$SERVER_IP:8001"
 print_info "===================================="
 print_info "常用命令:"
-print_info "  查看容器状态: ssh -p $SSH_PORT $SSH_USER@$SERVER_IP 'cd $REMOTE_DIR && docker compose ps'"
-print_info "  查看日志: ssh -p $SSH_PORT $SSH_USER@$SERVER_IP 'cd $REMOTE_DIR && docker compose logs -f'"
-print_info "  重启服务: ssh -p $SSH_PORT $SSH_USER@$SERVER_IP 'cd $REMOTE_DIR && docker compose restart'"
-print_info "  停止服务: ssh -p $SSH_PORT $SSH_USER@$SERVER_IP 'cd $REMOTE_DIR && docker compose down'"
+print_info "  查看容器状态: ssh -p $SSH_PORT $SSH_USER@$SERVER_IP 'cd $REMOTE_DIR && docker-compose ps'"
+print_info "  查看日志: ssh -p $SSH_PORT $SSH_USER@$SERVER_IP 'cd $REMOTE_DIR && docker-compose logs -f'"
+print_info "  重启服务: ssh -p $SSH_PORT $SSH_USER@$SERVER_IP 'cd $REMOTE_DIR && docker-compose restart'"
+print_info "  停止服务: ssh -p $SSH_PORT $SSH_USER@$SERVER_IP 'cd $REMOTE_DIR && docker-compose down'"
 print_info "===================================="
