@@ -42,9 +42,35 @@ class ProjectFile(SQLModel, table=True):
     filename: str
     filepath: str
     file_type: str = "other" # contract, settlement, etc.
+    category: str = "其他" # 文件夹分类
     uploaded_at: datetime = Field(default_factory=datetime.now)
-    
+
     project: Optional[Project] = Relationship(back_populates="files")
+
+# 文件夹分类常量
+FILE_CATEGORIES = [
+    "变更联系单",
+    "工程结算书",
+    "工期签证",
+    "合同",
+    "简复单",
+    "进度款支付证明",
+    "竣工报告",
+    "竣工验收证书",
+    "开工报告",
+    "全套纸质扫描",
+    "施工记录",
+    "施工组织设计",
+    "投标文件",
+    "图纸会审纪要",
+    "图纸交底",
+    "无价材料",
+    "隐蔽工程检查记录",
+    "预算审核报告",
+    "招标文件",
+    "中标通知书",
+    "其他"
+]
 
 # 数据库连接
 sqlite_url = f"sqlite:///{DB_FILE}"
@@ -92,13 +118,113 @@ class SaveDataRequest(SQLModel):
     data: Dict[str, Any]
 
 # --- 辅助函数 ---
+def amount_to_chinese(amount: float) -> str:
+    """
+    将金额转换为中文大写
+    例如：14800000.00 -> 壹仟肆佰捌拾万元整
+    """
+    if amount == 0:
+        return "零元整"
+
+    # 中文数字
+    chinese_numbers = ["零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"]
+    # 单位
+    units = ["", "拾", "佰", "仟"]
+    big_units = ["", "万", "亿", "兆"]
+
+    # 转换为分（避免浮点数精度问题）
+    amount_fen = int(round(amount * 100))
+
+    # 分离元和角分
+    yuan = amount_fen // 100
+    jiao = (amount_fen % 100) // 10
+    fen = amount_fen % 10
+
+    if yuan == 0:
+        result = "零"
+    else:
+        # 将元部分转换为字符串，方便按位处理
+        yuan_str = str(yuan)
+        length = len(yuan_str)
+        result = ""
+
+        # 从高位到低位处理
+        for i, digit in enumerate(yuan_str):
+            digit_int = int(digit)
+            # 当前位的权重（从右往左数）
+            pos = length - i - 1
+
+            if digit_int != 0:
+                result += chinese_numbers[digit_int]
+                result += units[pos % 4]
+            else:
+                # 避免连续的零
+                if result and result[-1] != "零":
+                    result += "零"
+
+            # 添加大单位（万、亿）
+            if pos % 4 == 0 and pos > 0:
+                unit_index = pos // 4
+                if unit_index < len(big_units):
+                    result += big_units[unit_index]
+                    # 去除单位前的零
+                    if result.endswith("零" + big_units[unit_index]):
+                        result = result[:-1-len(big_units[unit_index])] + big_units[unit_index]
+
+    # 去除末尾的零
+    result = result.rstrip("零")
+
+    # 添加"元"
+    result += "元"
+
+    # 处理角分
+    if jiao == 0 and fen == 0:
+        result += "整"
+    else:
+        if jiao != 0:
+            result += chinese_numbers[jiao] + "角"
+        if fen != 0:
+            result += chinese_numbers[fen] + "分"
+
+    return result
+
 def generate_docx_file(data: dict, filename_prefix: str) -> str:
     if not os.path.exists(TEMPLATE_PATH):
         raise FileNotFoundError("Template file not found")
-    
+
+    # 自动生成金额大写字段
+    # 注意：前端传入的是万元，需要转换成元
+    # 申定金额大写
+    if 'final_approved_amount' in data and data['final_approved_amount']:
+        try:
+            amount_wan = float(str(data['final_approved_amount']).replace('¥', '').replace(',', '').strip())
+            amount_yuan = amount_wan * 10000  # 万元转元
+            data['final_approved_amount_chinese'] = amount_to_chinese(amount_yuan)
+        except (ValueError, TypeError):
+            data['final_approved_amount_chinese'] = '***元整'
+
+    # 净核减额大写
+    if 'reduction_amount' in data and data['reduction_amount']:
+        try:
+            amount_wan = float(str(data['reduction_amount']).replace('¥', '').replace(',', '').strip())
+            amount_yuan = amount_wan * 10000  # 万元转元
+            data['reduction_amount_chinese'] = amount_to_chinese(amount_yuan)
+        except (ValueError, TypeError):
+            data['reduction_amount_chinese'] = '***元整'
+
+    # 处理多行文本字段：将 \n 转换为 Word 的手动换行符 \a
+    # 这样可以保持段落格式（悬挂缩进等）
+    multiline_fields = ['adjustments_description', 'other_notes', 'quality_status']
+    for field in multiline_fields:
+        if field in data and data[field]:
+            # \a 是 Word 中的手动换行符（软回车，Shift+Enter）
+            # 它会在同一段落内换行，继承段落格式
+            data[field] = str(data[field]).replace('\n', '\a')
+
+    # 直接渲染，Word表格会自动处理换行和居中
     tpl = DocxTemplate(TEMPLATE_PATH)
     tpl.render(data)
-    
+
     filename = f"{filename_prefix}_{uuid.uuid4()}.docx"
     file_path = os.path.join(TMP_DIR, filename)
     tpl.save(file_path)
@@ -131,6 +257,13 @@ def create_project(project: ProjectCreate, session: Session = Depends(get_sessio
         "audit_amount": 14800000.00,
         "final_approved_amount": 14750000.00,
         "reduction_amount": 758000.00,
+        "bidding_method": "公开招标",
+        "bidding_price_control": 15000000.00,
+        "bidding_price_winning": 14800000.00,
+        "quality_status": "经审核，",
+        "audit_fee_deduction": 0.00,
+        "audit_period_start": datetime.now().strftime("%Y年%m月%d日"),
+        "audit_period_end": datetime.now().strftime("%Y年%m月%d日"),
         "adjustments": [
             {"content": "C30混凝土工程量按实调减", "amount": 12.50},
             {"content": "亮化灯具品牌更换核减差价", "amount": 8.30}
@@ -193,41 +326,56 @@ def delete_project(project_id: int, session: Session = Depends(get_session)):
 
 # 2. 文件上传接口
 @app.post("/api/projects/{project_id}/upload")
-async def upload_file(project_id: int, file: UploadFile = File(...), session: Session = Depends(get_session)):
+async def upload_file(
+    project_id: int,
+    file: UploadFile = File(...),
+    category: str = Form(default="其他"),
+    session: Session = Depends(get_session)
+):
     project = session.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    
+
+    # 验证分类是否有效
+    if category not in FILE_CATEGORIES:
+        category = "其他"
+
     # 保存文件
     # 为避免重名，加个 UUID 前缀
     safe_filename = f"{uuid.uuid4().hex[:8]}_{file.filename}"
     file_path = os.path.join(UPLOAD_DIR, safe_filename)
-    
+
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-        
+
     # 记录到数据库
     db_file = ProjectFile(
         project_id=project_id,
         filename=file.filename, # 原始文件名用于展示
         filepath=file_path,
-        file_type="file" # 后续可根据后缀名优化
+        file_type="file", # 后续可根据后缀名优化
+        category=category
     )
     session.add(db_file)
     session.commit()
     session.refresh(db_file)
     return db_file
 
+@app.get("/api/file-categories")
+def get_file_categories():
+    """获取文件夹分类列表"""
+    return {"categories": FILE_CATEGORIES}
+
 @app.delete("/api/files/{file_id}")
 def delete_file(file_id: int, session: Session = Depends(get_session)):
     file_rec = session.get(ProjectFile, file_id)
     if not file_rec:
         raise HTTPException(status_code=404, detail="File not found")
-    
+
     # 删除物理文件
     if os.path.exists(file_rec.filepath):
         os.remove(file_rec.filepath)
-        
+
     session.delete(file_rec)
     session.commit()
     return {"status": "deleted"}
