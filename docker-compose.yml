@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # 后端服务
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: baogao_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # 持久化数据库
+      - ./database.db:/app/database.db
+      # 持久化上传文件
+      - ./uploads:/app/uploads
+      # 持久化临时文件
+      - ./tmp_reports:/app/tmp_reports
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - baogao_network
+
+  # 前端服务（Nginx）
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: baogao_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - baogao_network
+
+networks:
+  baogao_network:
+    driver: bridge

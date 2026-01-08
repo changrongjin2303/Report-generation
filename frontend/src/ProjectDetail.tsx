@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import locale from 'antd/es/date-picker/locale/zh_CN';
 import 'dayjs/locale/zh-cn';
 import PreviewReport from './PreviewReport';
+import { API_ENDPOINTS, getProjectAPI, getFileAPI } from './config';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -41,7 +42,7 @@ const ProjectDetail: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await axios.get('http://localhost:8000/api/file-categories');
+        const res = await axios.get(API_ENDPOINTS.fileCategories);
         const cats = res.data.categories;
         setCategories(cats);
         // 默认展开所有文件夹
@@ -58,7 +59,7 @@ const ProjectDetail: React.FC = () => {
     const fetchProject = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`http://localhost:8000/api/projects/${id}`);
+        const res = await axios.get(getProjectAPI(Number(id)).detail);
         setProjectData(res.data);
         setFiles(res.data.files);
         
@@ -107,7 +108,7 @@ const ProjectDetail: React.FC = () => {
       // 保存草稿不验证必填项，直接获取表单值
       const values = form.getFieldsValue();
       const formattedData = formatData(values);
-      await axios.put(`http://localhost:8000/api/projects/${id}/save`, { data: formattedData });
+      await axios.put(getProjectAPI(Number(id)).save, { data: formattedData });
       message.success('草稿保存成功');
     } catch (error: any) {
       console.error('保存失败:', error);
@@ -126,7 +127,7 @@ const ProjectDetail: React.FC = () => {
       const values = form.getFieldsValue(); 
       const formattedData = formatData(values);
       
-      const response = await axios.post('http://localhost:8000/api/preview', { data: formattedData }, {
+      const response = await axios.post(API_ENDPOINTS.preview, { data: formattedData }, {
         responseType: 'blob',
       });
 
@@ -147,9 +148,9 @@ const ProjectDetail: React.FC = () => {
       const formattedData = formatData(values);
 
       // 先自动保存一次
-      await axios.put(`http://localhost:8000/api/projects/${id}/save`, { data: formattedData });
+      await axios.put(getProjectAPI(Number(id)).save, { data: formattedData });
 
-      const response = await axios.post('http://localhost:8000/api/generate', { data: formattedData }, {
+      const response = await axios.post(API_ENDPOINTS.generate, { data: formattedData }, {
         responseType: 'blob',
       });
 
@@ -177,7 +178,7 @@ const ProjectDetail: React.FC = () => {
 
     try {
       const res = await axios.post(
-        `http://localhost:8000/api/projects/${id}/upload`,
+        getProjectAPI(Number(id)).upload,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
@@ -206,7 +207,7 @@ const ProjectDetail: React.FC = () => {
 
   const handleDeleteFile = async (fileId: number) => {
     try {
-      await axios.delete(`http://localhost:8000/api/files/${fileId}`);
+      await axios.delete(getFileAPI(fileId).delete);
       setFiles(prev => prev.filter(f => f.id !== fileId));
       message.success('文件已删除');
     } catch (e) {

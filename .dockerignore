@@ -1,0 +1,64 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose.yml
+.dockerignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 临时文件
+tmp_reports/*
+uploads/*
+*.db
+*.db-journal
+
+# 文档和脚本
+*.md
+fix_*.py
+check_*.py
+debug_*.py
+update_*.py
+test_*.py
+
+# 备份文件
+*_backup.*
+*.~*
+.~*
+
+# 测试文件
+test_*.docx
+test_*.pdf
+*.副本.*
+
+# macOS
+.DS_Store
+
+# 图片文件夹
+png/

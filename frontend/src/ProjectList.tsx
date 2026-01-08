@@ -4,6 +4,7 @@ import { PlusOutlined, FolderOpenOutlined, DeleteOutlined, RightOutlined } from 
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import { API_ENDPOINTS, getProjectAPI } from './config';
 
 const { Title, Text } = Typography;
 
@@ -25,7 +26,7 @@ const ProjectList: React.FC = () => {
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:8000/api/projects');
+      const res = await axios.get(API_ENDPOINTS.projects);
       setProjects(res.data);
     } catch (error) {
       message.error('加载项目列表失败');
@@ -40,7 +41,7 @@ const ProjectList: React.FC = () => {
 
   const handleCreate = async (values: any) => {
     try {
-      await axios.post('http://localhost:8000/api/projects', values);
+      await axios.post(API_ENDPOINTS.projects, values);
       message.success('项目创建成功');
       setIsModalVisible(false);
       form.resetFields();
@@ -55,7 +56,7 @@ const ProjectList: React.FC = () => {
 
   const handleDelete = async (id: number) => {
     try {
-      await axios.delete(`http://localhost:8000/api/projects/${id}`);
+      await axios.delete(getProjectAPI(id).delete);
       message.success('删除成功');
       fetchProjects();
     } catch (error) {
