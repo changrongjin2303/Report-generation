@@ -12,7 +12,8 @@ import shutil
 import subprocess
 
 # --- 配置 ---
-BASE_DIR = "/Users/crj/Documents/code/baogao_code"
+# 自动获取当前文件所在目录（兼容本地和Docker环境）
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, "database.db")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 TMP_DIR = os.path.join(BASE_DIR, "tmp_reports")
